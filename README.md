@@ -6,7 +6,7 @@
 
 - **逐步 SMT 推导** — 基于 Z3 的 UNSAT Core 提取，精确到具体行/列/宫的冲突解释
 - **启发式规则引擎** — Hidden Single、Naked Pair 等人类思维规则优先，Z3 作为保底验证
-- **拍照识别** — 上传数独照片，OpenCV 透视变换 + 动态轮廓提取 + EasyOCR 数字识别
+- **拍照识别** — 上传数独照片，OpenCV 透视变换 + 动态轮廓提取 + 本地 ONNX 模型数字识别（无需外部 OCR 服务）
 - **单格提示** — 选中任意空格，查看候选数字及排除原因
 - **多色状态标记** — 区分 OCR 识别、用户输入、SMT 推导三种来源
 - **盘面锁定** — 确认初始数字后只读保护，防止推导过程中误触
@@ -67,10 +67,12 @@ docker run -p 8000:8000 easysudoku
 EasySudoku/
 ├── smt_engine.py            # Z3 SMT 核心引擎 (建模 + UNSAT Core 推导)
 ├── heuristic_engine.py      # 启发式规则引擎 (Hidden Single + Naked Pair)
-├── vision.py                # 计算机视觉模块 (OpenCV + EasyOCR)
+├── vision.py                # 计算机视觉模块 (OpenCV + ONNX 数字识别)
 ├── main.py                  # FastAPI 后端
 ├── templates/
 │   └── index.html           # 前端页面 (TailwindCSS)
+├── models/
+│   └── sudoku_chars74k.onnx # Chars74K 训练的 CNN 数字识别模型
 ├── requirements.txt         # Python 依赖
 ├── Dockerfile               # Docker 容器配置
 ├── run.bat / run.sh         # 一键启动脚本
@@ -92,15 +94,17 @@ EasySudoku/
 | L3 | Naked Pair | 两格共享相同两候选数，排除同区域其他格子 |
 | L4 | SMT UNSAT Core | Z3 `assert_and_track` 精确标签，覆盖所有复杂情况 |
 
-### OCR 管线
+### 数字识别管线
 
 ```
 图片 → Canny 边缘检测 → 最大四边形轮廓 → 透视变换 → 切割 81 格
-→ 动态轮廓 bounding box 提取 → 白边 padding → EasyOCR 识别
+→ 动态轮廓提取 → 几何启发式拦截 → 等比例缩放 + 白色填充 → ONNX 模型推理
 ```
 
-- 动态轮廓提取替代固定裁剪，避免截断数字笔画
-- 基于面积+高度的双重过滤判定空格，跳过不必要的 OCR 调用
+- **动态轮廓提取** — 自适应阈值 + `findContours`，基于面积和高度双重过滤判定空格
+- **几何启发式** — 数字 1 的宽高比 < 0.45，直接硬逻辑拦截，绕过模型识别短板
+- **等比例缩放** — 最长边缩放至 28px 保持宽高比，白色填充至 32x32，消除强制 resize 的拉伸失真
+- **本地 ONNX 推理** — Chars74K 训练的 CNN 模型，通过 `cv2.dnn` 加载，零外部依赖，识别准确率约 97.5%
 
 ## API 接口
 
@@ -122,9 +126,10 @@ python test_phase3.py   # 视觉模块结构验证
 
 ## 技术栈
 
-- **后端**: Python 3.10+, FastAPI, uvicorn
-- **SMT 引擎**: z3-solver (Z3 Python API)
-- **计算机视觉**: opencv-python, EasyOCR
+- **后端**: Python 3.10+, FastAPI 0.111.0, uvicorn 0.30.1
+- **SMT 引擎**: z3-solver 4.13.0.0 (Z3 Python API)
+- **计算机视觉**: opencv-python 4.9.0.80, numpy 1.26.4
+- **数字识别**: 本地 ONNX 模型 (Chars74K CNN, cv2.dnn 推理)
 - **前端**: 原生 HTML/JS + TailwindCSS
 - **部署**: Docker (python:3.12-slim)
 

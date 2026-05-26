@@ -1,22 +1,20 @@
 """
 Computer Vision module for Sudoku image recognition.
-Uses OpenCV for image processing and EasyOCR for digit recognition.
+Uses OpenCV for image processing and local ONNX model for digit recognition.
 """
 
 import cv2
 import numpy as np
-import easyocr
 from typing import Optional
 
+_net = None
 
-_reader = None
 
-
-def _get_reader():
-    global _reader
-    if _reader is None:
-        _reader = easyocr.Reader(["en"], gpu=False)
-    return _reader
+def _get_net():
+    global _net
+    if _net is None:
+        _net = cv2.dnn.readNetFromONNX("models/sudoku_chars74k.onnx")
+    return _net
 
 
 def _find_puzzle_contour(gray: np.ndarray) -> Optional[np.ndarray]:
@@ -149,7 +147,7 @@ def _extract_digit_roi(cell_img: np.ndarray) -> Optional[np.ndarray]:
     # Crop digit from original grayscale image (not binary — preserves quality)
     digit_roi = gray[y_min:y_max, x_min:x_max]
 
-    # Add white padding around the digit (EasyOCR needs margin)
+    # Add white padding around the digit
     PAD = 8
     digit_padded = cv2.copyMakeBorder(
         digit_roi, PAD, PAD, PAD, PAD,
@@ -161,51 +159,64 @@ def _extract_digit_roi(cell_img: np.ndarray) -> Optional[np.ndarray]:
 
 def _recognize_digit(cell_img: np.ndarray) -> int:
     """
-    Recognize a digit in a cell image, return 0 if empty.
+    Recognize a digit in a cell image using local ONNX model, return 0 if empty.
 
     Pipeline:
     1. Dynamic contour extraction → determines if cell is empty and isolates digit
-    2. Resize to minimum height if needed
-    3. EasyOCR with strict digit-only allowlist
+    2. Grayscale + equalizeHist
+    3. Geometric heuristic: digit "1" has bw/bh < 0.45 → return 1 directly
+    4. Aspect-ratio-preserving resize (28px max) + white padding to 32x32
+    5. ONNX inference, return digit if confidence > 0.20, else 0
     """
-    # Task 1 & 2: Dynamic ROI extraction + empty cell detection
+    # Step 1: Dynamic ROI extraction + empty cell detection
     digit_roi = _extract_digit_roi(cell_img)
     if digit_roi is None:
         return 0
 
-    # Task 3: Resize if too small — no morphological operations
-    h, w = digit_roi.shape[:2]
-    if h < 32 or w < 32:
-        scale = max(32 / h, 32 / w)
-        digit_roi = cv2.resize(
-            digit_roi, None, fx=scale, fy=scale,
-            interpolation=cv2.INTER_CUBIC,
-        )
-
-    # Task 4: EasyOCR with strict parameters
-    # Convert grayscale to BGR for EasyOCR compatibility
-    if len(digit_roi.shape) == 2:
-        img_for_ocr = cv2.cvtColor(digit_roi, cv2.COLOR_GRAY2BGR)
+    # Step 2: Grayscale + equalizeHist
+    if len(digit_roi.shape) == 3:
+        gray = cv2.cvtColor(digit_roi, cv2.COLOR_BGR2GRAY)
     else:
-        img_for_ocr = digit_roi
+        gray = digit_roi
 
-    reader = _get_reader()
-    results = reader.readtext(
-        img_for_ocr,
-        allowlist="123456789",
-        detail=0,
-        paragraph=False,
+    equ = cv2.equalizeHist(gray)
+
+    # Step 3: Geometric heuristic — digit "1" is uniquely narrow
+    # Check actual digit pixel bounding box (ignoring white padding)
+    _, binary = cv2.threshold(equ, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    coords = cv2.findNonZero(binary)
+    if coords is not None:
+        bx, by, bw, bh = cv2.boundingRect(coords)
+        if bh > 0 and bw / bh < 0.45:
+            return 1
+
+    # Step 4: Aspect-ratio-preserving resize → fit in 28px, pad to 32x32
+    h, w = equ.shape[:2]
+    scale = 28.0 / max(h, w)
+    new_w = max(1, int(w * scale))
+    new_h = max(1, int(h * scale))
+    resized = cv2.resize(equ, (new_w, new_h), interpolation=cv2.INTER_AREA)
+
+    pad_top = (32 - new_h) // 2
+    pad_bottom = 32 - new_h - pad_top
+    pad_left = (32 - new_w) // 2
+    pad_right = 32 - new_w - pad_left
+    padded = cv2.copyMakeBorder(
+        resized, pad_top, pad_bottom, pad_left, pad_right,
+        cv2.BORDER_CONSTANT, value=255,
     )
 
-    if not results:
-        return 0
+    # Step 5: ONNX inference
+    blob = (padded.astype(np.float32) / 255.0).reshape(1, 32, 32, 1)
+    net = _get_net()
+    net.setInput(blob)
+    preds = net.forward()
 
-    try:
-        digit = int(results[0].strip())
-        if 1 <= digit <= 9:
-            return digit
-    except (ValueError, IndexError):
-        pass
+    digit = int(np.argmax(preds[0]))
+    confidence = float(preds[0][digit])
+
+    if digit != 0 and confidence > 0.20:
+        return digit
 
     return 0
 
