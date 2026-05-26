@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EasySudoku - SMT 数独推导导师</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .cell {
+            width: 48px;
+            height: 48px;
+            text-align: center;
+            font-size: 1.25rem;
+            font-weight: 600;
+            border: 1px solid #cbd5e1;
+            outline: none;
+            transition: background-color 0.3s, color 0.3s;
+            cursor: pointer;
+        }
+        .cell:focus {
+            background-color: #fef9c3;
+        }
+        /* Origin: ocr — black bold, readonly */
+        .cell.origin-ocr {
+            background-color: #f1f5f9;
+            color: #0f172a;
+            font-weight: 700;
+            cursor: default;
+        }
+        /* Origin: user — blue */
+        .cell.origin-user {
+            background-color: #eff6ff;
+            color: #1d4ed8;
+        }
+        /* Origin: derived — green */
+        .cell.origin-derived {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+        /* Origin: given (confirmed) — same as ocr */
+        .cell.origin-given {
+            background-color: #f1f5f9;
+            color: #0f172a;
+            font-weight: 700;
+            cursor: default;
+        }
+        /* Locked cells (confirmed board) */
+        .cell.locked {
+            pointer-events: none;
+        }
+        /* Selected empty cell */
+        .cell.selected {
+            box-shadow: inset 0 0 0 3px #3b82f6;
+            background-color: #dbeafe;
+        }
+        /* Just-derived highlight */
+        .cell.highlight {
+            animation: pulse 0.6s ease-in-out;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        /* Bold borders for 3x3 boxes */
+        .border-r-thick { border-right: 3px solid #334155 !important; }
+        .border-b-thick { border-bottom: 3px solid #334155 !important; }
+        .border-l-thick { border-left: 3px solid #334155 !important; }
+        .border-t-thick { border-top: 3px solid #334155 !important; }
+
+        .explanation-box {
+            font-family: 'Courier New', monospace;
+            line-height: 1.6;
+        }
+
+        /* Loading spinner */
+        .spinner-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.3);
+            z-index: 50;
+            justify-content: center;
+            align-items: center;
+        }
+        .spinner-overlay.active {
+            display: flex;
+        }
+        .spinner-box {
+            background: white;
+            border-radius: 12px;
+            padding: 32px 48px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e2e8f0;
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Legend */
+        .legend-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col items-center py-8">
+    <!-- Loading Overlay (Task 5) -->
+    <div id="loading-overlay" class="spinner-overlay">
+        <div class="spinner-box">
+            <div class="spinner"></div>
+            <p class="text-gray-700 font-medium" id="loading-text">正在识别图像...</p>
+        </div>
+    </div>
+
+    <h1 class="text-3xl font-bold text-gray-800 mb-2">EasySudoku</h1>
+    <p class="text-gray-500 mb-4">基于 Z3 UNSAT Core 的逐步逻辑推导</p>
+
+    <!-- Legend (Task 2) -->
+    <div class="flex gap-4 mb-6 text-sm text-gray-600">
+        <span><span class="legend-dot" style="background:#f1f5f9;border:1px solid #0f172a;color:#0f172a;font-size:10px;text-align:center;line-height:14px;"></span> OCR / 已确认</span>
+        <span><span class="legend-dot" style="background:#eff6ff;border:1px solid #1d4ed8;"></span> 用户输入</span>
+        <span><span class="legend-dot" style="background:#dcfce7;border:1px solid #166534;"></span> 推导结果</span>
+        <span><span class="legend-dot" style="background:#dbeafe;border:2px solid #3b82f6;"></span> 选中空格</span>
+    </div>
+
+    <div class="flex flex-col lg:flex-row gap-8 items-start">
+        <!-- Sudoku Grid -->
+        <div>
+            <div id="sudoku-grid" class="inline-grid grid-cols-9 border-3 border-slate-700 bg-white shadow-lg rounded">
+            </div>
+
+            <div class="flex gap-3 mt-4 flex-wrap">
+                <button onclick="nextStep()" id="btn-step"
+                    class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition font-medium">
+                    推导下一步
+                </button>
+                <button onclick="getHint()" id="btn-hint"
+                    class="bg-amber-500 text-white px-5 py-2 rounded-lg hover:bg-amber-600 transition font-medium">
+                    获取当前格提示
+                </button>
+                <button onclick="solveAll()"
+                    class="bg-green-600 text-white px-5 py-2 rounded-lg hover:bg-green-700 transition font-medium">
+                    直接求解
+                </button>
+                <button onclick="confirmBoard()" id="btn-confirm"
+                    class="bg-purple-600 text-white px-5 py-2 rounded-lg hover:bg-purple-700 transition font-medium">
+                    确认初始盘面
+                </button>
+                <button onclick="clearGrid()"
+                    class="bg-gray-400 text-white px-5 py-2 rounded-lg hover:bg-gray-500 transition font-medium">
+                    清空
+                </button>
+            </div>
+
+            <div class="mt-4">
+                <label class="block text-sm text-gray-600 mb-1">上传数独照片</label>
+                <input type="file" id="file-upload" accept="image/*"
+                    onchange="uploadImage(event)"
+                    class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100">
+            </div>
+        </div>
+
+        <!-- Explanation Panel -->
+        <div class="w-96">
+            <h2 class="text-lg font-semibold text-gray-700 mb-2">推导说明</h2>
+            <div id="explanation" class="explanation-box bg-white border rounded-lg p-4 min-h-[200px] text-sm text-gray-700 whitespace-pre-wrap shadow">
+                点击"推导下一步"开始，或选中一个空格后点击"获取当前格提示"...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const gridEl = document.getElementById('sudoku-grid');
+        const explanationEl = document.getElementById('explanation');
+
+        // Cell origin tracking: 'ocr' | 'user' | 'derived' | 'given'
+        const cellOrigins = {};   // key "i-j" -> origin string
+        let boardConfirmed = false;
+        let selectedCell = null;  // {row, col} or null
+
+        function originClass(origin) {
+            return origin ? `origin-${origin}` : '';
+        }
+
+        function initGrid() {
+            gridEl.innerHTML = '';
+            boardConfirmed = false;
+            selectedCell = null;
+            Object.keys(cellOrigins).forEach(k => delete cellOrigins[k]);
+
+            for (let i = 0; i < 9; i++) {
+                for (let j = 0; j < 9; j++) {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.maxLength = 1;
+                    input.className = 'cell';
+                    input.dataset.row = i;
+                    input.dataset.col = j;
+
+                    // Thick borders for 3x3 boxes
+                    if (j === 0 || j === 3 || j === 6) input.classList.add('border-l-thick');
+                    if (j === 8) input.classList.add('border-r-thick');
+                    if (i === 0 || i === 3 || i === 6) input.classList.add('border-t-thick');
+                    if (i === 8) input.classList.add('border-b-thick');
+
+                    input.addEventListener('input', (e) => {
+                        const v = e.target.value.replace(/[^1-9]/g, '');
+                        e.target.value = v;
+                        const key = `${i}-${j}`;
+                        if (v) {
+                            // Task 2: mark user input
+                            cellOrigins[key] = 'user';
+                            updateCellStyle(i, j);
+                        } else {
+                            delete cellOrigins[key];
+                            updateCellStyle(i, j);
+                        }
+                    });
+
+                    // Task 4: click to select empty cell for hint
+                    input.addEventListener('click', () => {
+                        if (input.value) return; // only select empty cells
+                        selectCell(i, j);
+                    });
+
+                    input.addEventListener('keydown', (e) => {
+                        if (e.key === 'ArrowRight' && j < 8) moveFocus(i, j + 1);
+                        else if (e.key === 'ArrowLeft' && j > 0) moveFocus(i, j - 1);
+                        else if (e.key === 'ArrowDown' && i < 8) moveFocus(i + 1, j);
+                        else if (e.key === 'ArrowUp' && i > 0) moveFocus(i - 1, j);
+                    });
+
+                    gridEl.appendChild(input);
+                }
+            }
+        }
+
+        function selectCell(r, c) {
+            // Deselect previous
+            if (selectedCell) {
+                const prev = getCell(selectedCell.row, selectedCell.col);
+                if (prev) prev.classList.remove('selected');
+            }
+            selectedCell = { row: r, col: c };
+            const cell = getCell(r, c);
+            if (cell) cell.classList.add('selected');
+        }
+
+        function clearSelection() {
+            if (selectedCell) {
+                const prev = getCell(selectedCell.row, selectedCell.col);
+                if (prev) prev.classList.remove('selected');
+                selectedCell = null;
+            }
+        }
+
+        function moveFocus(r, c) {
+            const cell = getCell(r, c);
+            if (cell) cell.focus();
+        }
+
+        function getCell(r, c) {
+            return gridEl.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+        }
+
+        function updateCellStyle(r, c) {
+            const cell = getCell(r, c);
+            if (!cell) return;
+            // Remove all origin classes
+            cell.classList.remove('origin-ocr', 'origin-user', 'origin-derived', 'origin-given', 'locked');
+            const key = `${r}-${c}`;
+            const origin = cellOrigins[key];
+            if (origin) {
+                cell.classList.add(originClass(origin));
+            }
+            if (boardConfirmed && (origin === 'given' || origin === 'ocr')) {
+                cell.classList.add('locked');
+            }
+        }
+
+        function getGrid() {
+            const grid = [];
+            for (let i = 0; i < 9; i++) {
+                const row = [];
+                for (let j = 0; j < 9; j++) {
+                    const cell = getCell(i, j);
+                    row.push(parseInt(cell.value) || 0);
+                }
+                grid.push(row);
+            }
+            return grid;
+        }
+
+        function setGrid(grid, origin, highlightRow, highlightCol) {
+            for (let i = 0; i < 9; i++) {
+                for (let j = 0; j < 9; j++) {
+                    const cell = getCell(i, j);
+                    cell.value = grid[i][j] || '';
+                    const key = `${i}-${j}`;
+
+                    cell.classList.remove('highlight', 'selected');
+
+                    if (grid[i][j]) {
+                        if (origin === 'ocr') {
+                            cellOrigins[key] = 'ocr';
+                        } else if (origin === 'derived') {
+                            // Don't override already-set origins unless this is the derived cell
+                            if (i === highlightRow && j === highlightCol) {
+                                cellOrigins[key] = 'derived';
+                            } else if (!cellOrigins[key]) {
+                                cellOrigins[key] = 'derived';
+                            }
+                        }
+                    }
+
+                    updateCellStyle(i, j);
+
+                    if (i === highlightRow && j === highlightCol) {
+                        cell.classList.add('highlight');
+                    }
+                }
+            }
+        }
+
+        // ---- Loading helpers (Task 5) ----
+        function showLoading(text) {
+            document.getElementById('loading-text').textContent = text || '处理中...';
+            document.getElementById('loading-overlay').classList.add('active');
+        }
+        function hideLoading() {
+            document.getElementById('loading-overlay').classList.remove('active');
+        }
+
+        // ---- API calls ----
+
+        async function nextStep() {
+            const grid = getGrid();
+            const btn = document.getElementById('btn-step');
+            btn.disabled = true;
+            btn.textContent = '推导中...';
+
+            try {
+                const res = await fetch('/next-step', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ grid }),
+                });
+
+                const data = await res.json();
+                if (!data) {
+                    explanationEl.textContent = '无法通过单步推导确定更多格子。\n可能需要更高级的推理技巧。';
+                    return;
+                }
+
+                // Update grid: only the new cell gets 'derived' origin
+                for (let i = 0; i < 9; i++) {
+                    for (let j = 0; j < 9; j++) {
+                        const cell = getCell(i, j);
+                        cell.value = data.updated_grid[i][j] || '';
+                        cell.classList.remove('highlight');
+                        if (i === data.row && j === data.col) {
+                            cellOrigins[`${i}-${j}`] = 'derived';
+                            cell.classList.add('highlight');
+                        }
+                        updateCellStyle(i, j);
+                    }
+                }
+                explanationEl.textContent = data.explanation;
+
+            } catch (err) {
+                explanationEl.textContent = '请求失败: ' + err.message;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '推导下一步';
+            }
+        }
+
+        // Task 4: hint for selected cell
+        async function getHint() {
+            if (!selectedCell) {
+                explanationEl.textContent = '请先点击一个空格来选中它，然后再获取提示。';
+                return;
+            }
+            const { row, col } = selectedCell;
+            const grid = getGrid();
+            if (grid[row][col] !== 0) {
+                explanationEl.textContent = `位置 (${row + 1},${col + 1}) 已经有数字了。`;
+                return;
+            }
+
+            const btn = document.getElementById('btn-hint');
+            btn.disabled = true;
+            btn.textContent = '分析中...';
+
+            try {
+                const res = await fetch('/hint-cell', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ grid, row, col }),
+                });
+                const data = await res.json();
+                explanationEl.textContent = data.explanation;
+
+                // If only one candidate, offer to fill it
+                if (data.candidates && data.candidates.length === 1) {
+                    const val = data.candidates[0];
+                    explanationEl.textContent += `\n\n>>> 点击"推导下一步"来自动填入 ${val}`;
+                }
+            } catch (err) {
+                explanationEl.textContent = '请求失败: ' + err.message;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '获取当前格提示';
+            }
+        }
+
+        async function solveAll() {
+            const grid = getGrid();
+            try {
+                const res = await fetch('/solve', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ grid }),
+                });
+                const data = await res.json();
+                if (data.solution) {
+                    for (let i = 0; i < 9; i++) {
+                        for (let j = 0; j < 9; j++) {
+                            const cell = getCell(i, j);
+                            cell.value = data.solution[i][j] || '';
+                            const key = `${i}-${j}`;
+                            if (!cellOrigins[key]) {
+                                cellOrigins[key] = 'derived';
+                            }
+                            updateCellStyle(i, j);
+                        }
+                    }
+                    explanationEl.textContent = '已直接求解完成！';
+                } else {
+                    explanationEl.textContent = '无解 — 请检查输入的数字是否正确。';
+                }
+            } catch (err) {
+                explanationEl.textContent = '求解失败: ' + err.message;
+            }
+        }
+
+        // Task 5: upload with loading
+        async function uploadImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            showLoading('正在识别图像...');
+            explanationEl.textContent = '正在识别图片中的数字...';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+                const data = await res.json();
+                boardConfirmed = false;
+                setGrid(data.grid, 'ocr');
+                explanationEl.textContent = '图片识别完成！请检查数字是否正确。\n修正后点击"确认初始盘面"锁定，然后开始推导。';
+            } catch (err) {
+                explanationEl.textContent = '图片识别失败: ' + err.message;
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Task 3: confirm board
+        function confirmBoard() {
+            const grid = getGrid();
+            let count = 0;
+            for (let i = 0; i < 9; i++) {
+                for (let j = 0; j < 9; j++) {
+                    const key = `${i}-${j}`;
+                    if (grid[i][j] !== 0) {
+                        // Convert all non-empty cells to 'given' origin
+                        cellOrigins[key] = 'given';
+                        const cell = getCell(i, j);
+                        cell.classList.add('locked');
+                        updateCellStyle(i, j);
+                        count++;
+                    }
+                }
+            }
+            boardConfirmed = true;
+            const btn = document.getElementById('btn-confirm');
+            btn.disabled = true;
+            btn.textContent = '已确认';
+            btn.classList.remove('bg-purple-600', 'hover:bg-purple-700');
+            btn.classList.add('bg-gray-400');
+            explanationEl.textContent = `初始盘面已确认（${count} 个已知数字）。\n所有已知数字已锁定为只读，可以开始推导了。`;
+        }
+
+        function clearGrid() {
+            boardConfirmed = false;
+            const btn = document.getElementById('btn-confirm');
+            btn.disabled = false;
+            btn.textContent = '确认初始盘面';
+            btn.classList.remove('bg-gray-400');
+            btn.classList.add('bg-purple-600', 'hover:bg-purple-700');
+            initGrid();
+            explanationEl.textContent = '点击"推导下一步"开始，或选中一个空格后点击"获取当前格提示"...';
+        }
+
+        initGrid();
+    </script>
+</body>
+</html>

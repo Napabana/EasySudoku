@@ -1,0 +1,6 @@
+fastapi[all]==0.111.0
+z3-solver==4.13.0.0
+opencv-python==4.9.0.80
+easyocr==1.7.1
+numpy==1.26.4
+uvicorn==0.30.1
