@@ -8,7 +8,7 @@
 - **启发式规则引擎** — Hidden Single、Naked Pair 等人类思维规则优先，Z3 作为保底验证
 - **拍照识别** — 上传数独照片，OpenCV 透视变换 + 动态轮廓提取 + 本地 ONNX 模型数字识别（无需外部 OCR 服务）
 - **单格提示** — 选中任意空格，查看候选数字及排除原因
-- **多色状态标记** — 区分 OCR 识别、用户输入、SMT 推导三种来源
+- **多色状态标记** — 区分 OCR 识别、用户输入、SMT 推导、已确认锁定四种来源
 - **盘面锁定** — 确认初始数字后只读保护，防止推导过程中误触
 
 ## 快速开始
@@ -126,9 +126,9 @@ python test_phase3.py   # 视觉模块结构验证
 
 ## 技术栈
 
-- **后端**: Python 3.10+, FastAPI 0.111.0, uvicorn 0.30.1
-- **SMT 引擎**: z3-solver 4.13.0.0 (Z3 Python API)
-- **计算机视觉**: opencv-python 4.9.0.80, numpy 1.26.4
+- **后端**: Python 3.10+, FastAPI, uvicorn, python-multipart
+- **SMT 引擎**: z3-solver (Z3 Python API)
+- **计算机视觉**: opencv-python, numpy
 - **数字识别**: 本地 ONNX 模型 (Chars74K CNN, cv2.dnn 推理)
 - **前端**: 原生 HTML/JS + TailwindCSS
 - **部署**: Docker (python:3.12-slim)
