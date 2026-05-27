@@ -21,6 +21,8 @@ env/
 .env
 *.log
 
+sudo测试图片对应值.txt
+
 # Claude Code 提示文件与日志
 claude*.md
 CLAUDE.md
