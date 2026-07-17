@@ -13,9 +13,18 @@ if errorlevel 1 (
     exit /b 1
 )
 
+:: 检查 Node/npm 是否可用
+npm --version >nul 2>&1
+if errorlevel 1 (
+    echo [警告] 未检测到 npm，将跳过 Vue 前端构建并回退到旧页面
+    set HAS_NPM=0
+) else (
+    set HAS_NPM=1
+)
+
 :: 检查并创建虚拟环境
 if not exist "venv\Scripts\activate.bat" (
-    echo [1/3] 正在创建虚拟环境...
+    echo [1/4] 正在创建虚拟环境...
     python -m venv venv
     if errorlevel 1 (
         echo [错误] 创建虚拟环境失败
@@ -24,14 +33,14 @@ if not exist "venv\Scripts\activate.bat" (
     )
     echo       虚拟环境创建成功
 ) else (
-    echo [1/3] 虚拟环境已存在，跳过创建
+    echo [1/4] 虚拟环境已存在，跳过创建
 )
 
 :: 激活虚拟环境
 call .\venv\Scripts\activate
 
 :: 安装依赖
-echo [2/3] 正在安装依赖（首次运行可能需要几分钟）...
+echo [2/4] 正在安装 Python 依赖（首次运行可能需要几分钟）...
 pip install -r requirements.txt -q
 if errorlevel 1 (
     echo [错误] 依赖安装失败
@@ -39,6 +48,29 @@ if errorlevel 1 (
     exit /b 1
 )
 echo       依赖安装完成
+
+if "%HAS_NPM%"=="1" (
+    echo [3/4] 正在构建 Vue 前端...
+    pushd frontend
+    call npm install
+    if errorlevel 1 (
+        popd
+        echo [错误] 前端依赖安装失败
+        pause
+        exit /b 1
+    )
+    call npm run build
+    if errorlevel 1 (
+        popd
+        echo [错误] 前端构建失败
+        pause
+        exit /b 1
+    )
+    popd
+    echo       前端构建完成
+) else (
+    echo [3/4] 跳过 Vue 前端构建
+)
 
 :: 检查端口占用
 netstat -ano | findstr ":8000" | findstr "LISTENING" >nul 2>&1
@@ -64,7 +96,7 @@ if "%CHOICE%"=="1" (
 )
 
 :start_server
-echo [3/3] 正在启动服务...
+echo [4/4] 正在启动服务...
 echo.
 echo   访问地址: http://127.0.0.1:8000
 echo   按 Ctrl+C 停止服务

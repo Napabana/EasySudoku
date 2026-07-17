@@ -295,6 +295,30 @@ def _explain_elimination(
     return f"位置 ({row + 1},{col + 1}) 不能填 {digit}（与多重约束组合冲突）"
 
 
+def _structured_step(
+    row: int,
+    col: int,
+    value: int,
+    rule_type: str,
+    difficulty: str,
+    explanation_key: str,
+    explanation_params: dict,
+    candidate_changes: list[dict] | None = None,
+    verification_type: str = "human_rule",
+) -> dict:
+    """Build the structured deduction payload used by the Vue frontend."""
+    return {
+        "rule_type": rule_type,
+        "difficulty": difficulty,
+        "target_cell": {"row": row, "col": col},
+        "value": value,
+        "explanation_key": explanation_key,
+        "explanation_params": explanation_params,
+        "candidate_changes": candidate_changes or [],
+        "verification_type": verification_type,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Task 4: Heuristic engine integration point
 # ---------------------------------------------------------------------------
@@ -407,6 +431,30 @@ def get_next_logical_step(
                 "explanation": explanation,
                 "eliminations": elimination_reasons,
                 "updated_grid": updated,
+                "step": _structured_step(
+                    row,
+                    col,
+                    value,
+                    "smt_verification",
+                    "smt",
+                    "deduction.smtVerification",
+                    {
+                        "row": row + 1,
+                        "column": col + 1,
+                        "value": value,
+                        "eliminated_count": len(elimination_reasons),
+                    },
+                    [{
+                        "row": row,
+                        "col": col,
+                        "removed": [digit for digit in range(1, 10) if digit != value],
+                        "reason_key": "deduction.smtElimination",
+                        "reason_params": {"eliminated_count": len(elimination_reasons)},
+                    }],
+                    "smt",
+                ),
+                "board": updated,
+                "legacy_explanation": explanation,
             }
 
     return None

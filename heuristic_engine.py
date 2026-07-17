@@ -53,6 +53,11 @@ def _format_step(
     row: int, col: int, value: int,
     technique: str, reason: str,
     grid: list[list[int]],
+    rule_type: str,
+    difficulty: str,
+    explanation_key: str,
+    explanation_params: dict,
+    candidate_changes: list[dict] | None = None,
 ) -> dict:
     """Build a standard step result dict."""
     updated = [r[:] for r in grid]
@@ -71,6 +76,18 @@ def _format_step(
         "explanation": explanation,
         "eliminations": [reason],
         "updated_grid": updated,
+        "step": {
+            "rule_type": rule_type,
+            "difficulty": difficulty,
+            "target_cell": {"row": row, "col": col},
+            "value": value,
+            "explanation_key": explanation_key,
+            "explanation_params": explanation_params,
+            "candidate_changes": candidate_changes or [],
+            "verification_type": "human_rule",
+        },
+        "board": updated,
+        "legacy_explanation": explanation,
     }
 
 
@@ -106,6 +123,16 @@ def find_hidden_single(grid: list[list[int]]) -> Optional[dict]:
                     "隐性唯一数 (Hidden Single)",
                     f"数字 {digit} 在第 {r + 1} 行中只能填在位置 ({r + 1},{c + 1})",
                     grid,
+                    "hidden_single",
+                    "basic",
+                    "deduction.hiddenSingle",
+                    {
+                        "row": r + 1,
+                        "column": c + 1,
+                        "value": digit,
+                        "region_type": "row",
+                        "region_index": r + 1,
+                    },
                 )
 
     # Scan columns
@@ -125,6 +152,16 @@ def find_hidden_single(grid: list[list[int]]) -> Optional[dict]:
                     "隐性唯一数 (Hidden Single)",
                     f"数字 {digit} 在第 {c + 1} 列中只能填在位置 ({r + 1},{c + 1})",
                     grid,
+                    "hidden_single",
+                    "basic",
+                    "deduction.hiddenSingle",
+                    {
+                        "row": r + 1,
+                        "column": c + 1,
+                        "value": digit,
+                        "region_type": "column",
+                        "region_index": c + 1,
+                    },
                 )
 
     # Scan boxes
@@ -147,6 +184,16 @@ def find_hidden_single(grid: list[list[int]]) -> Optional[dict]:
                         f"数字 {digit} 在宫格（第 {br * 3 + 1}-{br * 3 + 3} 行、"
                         f"第 {bc * 3 + 1}-{bc * 3 + 3} 列）中只能填在位置 ({r + 1},{c + 1})",
                         grid,
+                        "hidden_single",
+                        "basic",
+                        "deduction.hiddenSingle",
+                        {
+                            "row": r + 1,
+                            "column": c + 1,
+                            "value": digit,
+                            "region_type": "box",
+                            "region_index": br * 3 + bc + 1,
+                        },
                     )
 
     return None
@@ -204,6 +251,28 @@ def find_naked_pair(grid: list[list[int]]) -> Optional[dict]:
                             f"形成数对 {sorted(cands_a)}，"
                             f"排除后位置 ({i + 1},{j + 1}) 只能填 {val}",
                             grid,
+                            "naked_pair",
+                            "intermediate",
+                            "deduction.nakedPair",
+                            {
+                                "row": i + 1,
+                                "column": j + 1,
+                                "value": val,
+                                "pair_cell_a": f"R{r1 + 1}C{c1 + 1}",
+                                "pair_cell_b": f"R{r2 + 1}C{c2 + 1}",
+                                "pair_values": ",".join(str(v) for v in sorted(cands_a)),
+                            },
+                            [{
+                                "row": i,
+                                "col": j,
+                                "removed": sorted(eliminated),
+                                "reason_key": "deduction.nakedPairRemoval",
+                                "reason_params": {
+                                    "pair_cell_a": f"R{r1 + 1}C{c1 + 1}",
+                                    "pair_cell_b": f"R{r2 + 1}C{c2 + 1}",
+                                    "pair_values": ",".join(str(v) for v in sorted(cands_a)),
+                                },
+                            }],
                         )
 
         return None

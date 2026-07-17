@@ -1,6 +1,6 @@
 # EasySudoku
 
-基于 Z3 SMT Solver 的数独逐步推导导师。拍照上传或手动输入数独题目，系统利用 UNSAT Core 机制逐步推导每个空格的唯一解，并给出人类可读的逻辑解释。
+基于 Z3 SMT Solver 的数独逐步推导导师。用户可以上传数独照片或手动输入题目，系统先用本地 OCR 识别盘面，再通过人类规则和 SMT 验证逐步推导下一步，并用中英文解释每一步为什么成立。
 
 ## 功能特性
 
@@ -8,14 +8,18 @@
 - **启发式规则引擎** — Hidden Single、Naked Pair 等人类思维规则优先，Z3 作为保底验证
 - **拍照识别** — 上传数独照片，OpenCV 透视变换 + 动态轮廓提取 + 本地 ONNX 模型数字识别（无需外部 OCR 服务）
 - **单格提示** — 选中任意空格，查看候选数字及排除原因
-- **多色状态标记** — 区分 OCR 识别、用户输入、SMT 推导、已确认锁定四种来源
+- **中英文界面与解释** — Vue i18n 管理 UI、规则名称、解释模式和错误提示
+- **候选数与历史回放** — 3x3 候选数显示、步骤历史、回退/前进和刷新恢复
+- **多色状态标记** — 区分 OCR 识别、用户输入、推导结果、当前目标和选中格
 - **盘面锁定** — 确认初始数字后只读保护，防止推导过程中误触
+- **响应式 Web App** — 桌面三栏布局，移动端上下布局，Playwright smoke test 覆盖主流程
 
 ## 快速开始
 
 ### 环境要求
 
 - Python 3.10+
+- Node.js 18+ / npm
 - Windows / Linux / macOS
 
 ### 方式一：一键脚本
@@ -29,6 +33,7 @@ chmod +x run.sh && ./run.sh
 ```
 
 脚本会自动创建虚拟环境、安装依赖、启动服务。
+如果检测到可用 npm，会构建 Vue 前端；如果 npm 在 WSL 中命中错误的 Windows shim，脚本会使用已安装的 `frontend/node_modules` 兜底构建，或回退到已有构建产物。
 
 ### 方式二：手动启动
 
@@ -41,6 +46,12 @@ python -m venv venv
 source venv/bin/activate
 
 pip install -r requirements.txt
+
+cd frontend
+npm install
+npm run build
+cd ..
+
 python -m uvicorn main:app --host 127.0.0.1 --port 8000
 ```
 
@@ -55,11 +66,12 @@ docker run -p 8000:8000 easysudoku
 
 ## 使用方法
 
-1. **手动输入** — 在 9x9 网格中填入已知数字，点击「确认初始盘面」锁定
-2. **拍照上传** — 点击上传按钮选择数独照片，OCR 自动识别填入网格
-3. **逐步推导** — 点击「推导下一步」，查看 Z3 给出的逻辑推理和排除原因
-4. **单格提示** — 点击选中一个空格，点击「获取当前格提示」查看候选数
-5. **直接求解** — 点击「直接求解」一键获得完整答案
+1. **选择语言** — 首次进入选择中文或英文，之后会保存到浏览器本地
+2. **拍照上传或手动输入** — 上传数独照片自动 OCR，或直接在 9x9 网格中输入已知数字
+3. **修正并确认盘面** — 检查 OCR 结果，点击「确认初始盘面」锁定初始数字
+4. **逐步推导** — 点击「推导下一步」，查看目标格、结论、原因和验证方式
+5. **查看提示和历史** — 选中空格查看候选数，使用 Back/Forward 或历史列表回放步骤
+6. **刷新恢复** — 盘面、历史、语言、解释模式和上传图片会保存在浏览器本地
 
 ## 项目结构
 
@@ -69,8 +81,18 @@ EasySudoku/
 ├── heuristic_engine.py      # 启发式规则引擎 (Hidden Single + Naked Pair)
 ├── vision.py                # 计算机视觉模块 (OpenCV + ONNX 数字识别)
 ├── main.py                  # FastAPI 后端
+├── frontend/                # Vue 3 + Vite + TypeScript + Tailwind 前端
+│   ├── src/
+│   │   ├── components/      # 数独盘面、操作区、解释区、历史、上传等组件
+│   │   ├── composables/     # useSudoku/useHistory/usePersistence 状态逻辑
+│   │   ├── services/        # API adapter，兼容结构化和旧格式响应
+│   │   ├── locales/         # zh-CN / en-US 文案
+│   │   └── types/           # TypeScript 类型
+│   └── tests/e2e/           # Playwright smoke tests
 ├── templates/
-│   └── index.html           # 前端页面 (TailwindCSS)
+│   └── index.html           # 旧前端回退页面
+├── docs/
+│   └── demo_script.md       # 黑客松演示脚本
 ├── models/
 │   └── sudoku_chars74k.onnx # Chars74K 训练的 CNN 数字识别模型
 ├── requirements.txt         # Python 依赖
@@ -84,7 +106,7 @@ EasySudoku/
 ### 推导管线
 
 ```
-用户输入/OCR → 启发式规则 (Hidden Single → Naked Pair) → Z3 UNSAT Core → 人类可读解释
+用户输入/OCR → 启发式规则 (Hidden Single → Naked Pair) → Z3 UNSAT Core → 结构化推导步骤 → i18n 解释
 ```
 
 | 层级 | 策略 | 说明 |
@@ -112,9 +134,40 @@ EasySudoku/
 |------|------|------|
 | GET | `/` | 渲染前端页面 |
 | POST | `/upload` | 上传数独照片，返回识别矩阵 |
-| POST | `/next-step` | 返回下一步推导及解释 |
+| POST | `/next-step` | 返回下一步推导、结构化 step、旧字段兼容解释 |
 | POST | `/hint-cell` | 查询单格候选数及排除原因 |
 | POST | `/solve` | 直接求解完整答案 |
+
+`/next-step` 保留旧字段以兼容早期前端，同时新增结构化字段：
+
+```json
+{
+  "row": 2,
+  "col": 6,
+  "value": 5,
+  "explanation": "legacy explanation",
+  "eliminations": [],
+  "updated_grid": [],
+  "step": {
+    "rule_type": "hidden_single",
+    "difficulty": "basic",
+    "target_cell": { "row": 2, "col": 6 },
+    "value": 5,
+    "explanation_key": "deduction.hiddenSingle",
+    "explanation_params": {
+      "row": 3,
+      "column": 7,
+      "value": 5,
+      "region_type": "row",
+      "region_index": 3
+    },
+    "candidate_changes": [],
+    "verification_type": "human_rule"
+  },
+  "board": [],
+  "legacy_explanation": "legacy explanation"
+}
+```
 
 ## 运行测试
 
@@ -124,17 +177,61 @@ python test_phase2.py   # UNSAT Core 逐步推导 (51步完整求解)
 python test_phase3.py   # 视觉模块结构验证
 ```
 
+### 前端 Smoke Test
+
+先启动后端服务：
+
+```bash
+python -m uvicorn main:app --host 127.0.0.1 --port 8000
+```
+
+另开一个终端运行：
+
+```bash
+cd frontend
+npm install
+npm run test:smoke:install
+EASYSUDOKU_BASE_URL=http://127.0.0.1:8000 npm run test:smoke
+```
+
+如果 Playwright 报 `libnspr4.so: cannot open shared object file` 或类似系统库缺失，在 Linux/WSL 中先安装浏览器依赖：
+
+```bash
+cd frontend
+sudo npm run test:smoke:deps
+```
+
+也可以直接使用 Playwright 官方命令：
+
+```bash
+sudo npx playwright install-deps chromium
+```
+
 ## 技术栈
 
 - **后端**: Python 3.10+, FastAPI, uvicorn, python-multipart
 - **SMT 引擎**: z3-solver (Z3 Python API)
 - **计算机视觉**: opencv-python, numpy
 - **数字识别**: 本地 ONNX 模型 (Chars74K CNN, cv2.dnn 推理)
-- **前端**: 原生 HTML/JS + TailwindCSS
-- **部署**: Docker (python:3.12-slim)
+- **前端**: Vue 3, Vite, TypeScript, Tailwind CSS, vue-i18n
+- **测试**: Python 脚本测试 + Playwright smoke test
+- **部署**: Docker 多阶段构建 (Node 构建 Vue, python:3.12-slim 运行 FastAPI)
+
+## 黑客松演示
+
+推荐演示流程见 [docs/demo_script.md](docs/demo_script.md)。核心展示顺序：
+
+1. 中文/英文切换
+2. 上传数独图片并修正 OCR 结果
+3. 确认初始盘面
+4. 展示候选数、选中格、当前目标和解释分组
+5. 执行下一步并切换 Brief / Teaching / Technical
+6. 历史回退/前进
+7. 刷新页面并恢复状态
 
 ## 后续规划
 
-- [ ] 扩展启发式规则 (Naked Triple/Quad, Pointing Pair, X-Wing)
-- [ ] 推导历史回放，支持撤销/重做
-- [ ] 移动端响应式优化
+- [ ] 扩展启发式规则 (Pointing Pair, Box-Line Reduction, Naked Triple, Hidden Pair)
+- [ ] 第二阶段实现完整推导链生成与播放
+- [ ] 增加更细粒度的候选数变化解释
+- [ ] X-Wing 等复杂技巧放入后续高级规则阶段
