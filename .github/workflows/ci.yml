@@ -77,3 +77,32 @@ jobs:
 
       - name: Build production image
         run: docker build --build-arg GIT_COMMIT="$GITHUB_SHA" -t easysudoku:ci .
+
+      - name: Run production container
+        run: |
+          docker run -d --name easysudoku-ci -p 8001:8000 easysudoku:ci
+
+      - name: Verify container health
+        run: |
+          for attempt in {1..30}; do
+            status="$(docker inspect --format='{{.State.Health.Status}}' easysudoku-ci 2>/dev/null || true)"
+            if [ "$status" = "healthy" ]; then
+              curl --fail http://127.0.0.1:8001/health
+              curl --fail http://127.0.0.1:8001/
+              exit 0
+            fi
+
+            if [ "$status" = "unhealthy" ]; then
+              docker logs easysudoku-ci
+              exit 1
+            fi
+
+            sleep 2
+          done
+
+          docker logs easysudoku-ci
+          exit 1
+
+      - name: Stop production container
+        if: always()
+        run: docker rm -f easysudoku-ci || true
