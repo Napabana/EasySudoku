@@ -22,6 +22,7 @@ export default {
   },
   controls: {
     upload: "上传图片",
+    loadDemo: "加载示例盘面",
     confirm: "确认初始盘面",
     confirmed: "盘面已确认",
     edit: "重新编辑盘面",
@@ -80,6 +81,7 @@ export default {
     ready: "上传图片或手动输入已知数字，然后确认初始盘面。",
     uploading: "正在识别图像...",
     uploaded: "识别完成。请检查并修正盘面，然后确认初始盘面。",
+    demoLoaded: "示例盘面已加载，请检查后确认初始盘面。",
     confirmed: "初始盘面已锁定，可以开始推导。",
     editing: "已进入编辑模式，可以修改初始盘面。",
     deriving: "正在推导下一步...",
@@ -94,6 +96,12 @@ export default {
     locked: "初始盘面已锁定，点击“重新编辑盘面”后才能修改。",
     confirmFirst: "请先确认初始盘面。",
     uploadFailed: "图片识别失败",
+    emptyFile: "所选文件为空。",
+    fileTooLarge: "所选图片过大。",
+    invalidImageType: "请选择支持的图片文件。",
+    noDigits: "未能从图片中识别出数独数字。",
+    ocrUnavailable: "OCR 模型当前不可用。",
+    unreadableImage: "无法处理该图片。",
     requestFailed: "请求失败",
     solveFailed: "无解或输入存在冲突。",
     storageFailed: "本地保存失败，当前会话仍可继续使用。"

@@ -20,6 +20,7 @@ const modes: ExplanationMode[] = ["brief", "teaching", "technical"];
         v-for="mode in modes"
         :key="mode"
         type="button"
+        :data-testid="`mode-${mode}`"
         class="rounded px-2 py-1.5 text-sm font-medium transition"
         :class="modelValue === mode ? 'bg-emerald-700 text-white' : 'text-slate-600 hover:bg-slate-100'"
         @click="emit('update:modelValue', mode)"

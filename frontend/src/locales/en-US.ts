@@ -22,6 +22,7 @@ export default {
   },
   controls: {
     upload: "Upload image",
+    loadDemo: "Load demo puzzle",
     confirm: "Confirm givens",
     confirmed: "Puzzle confirmed",
     edit: "Edit puzzle",
@@ -80,6 +81,7 @@ export default {
     ready: "Upload an image or enter the givens, then confirm the board.",
     uploading: "Recognizing image...",
     uploaded: "Recognition finished. Review the board, correct it, then confirm the givens.",
+    demoLoaded: "Demo puzzle loaded. Review it, then confirm the givens.",
     confirmed: "The initial board is locked. You can start deriving steps.",
     editing: "Editing is enabled. You can update the initial board.",
     deriving: "Deriving the next step...",
@@ -94,6 +96,12 @@ export default {
     locked: "The board is locked. Use “Edit givens” before changing it.",
     confirmFirst: "Confirm the initial board first.",
     uploadFailed: "Image recognition failed",
+    emptyFile: "The selected file is empty.",
+    fileTooLarge: "The selected image is too large.",
+    invalidImageType: "Choose a supported image file.",
+    noDigits: "No Sudoku digits were recognized in this image.",
+    ocrUnavailable: "The OCR model is unavailable.",
+    unreadableImage: "The image could not be processed.",
     requestFailed: "Request failed",
     solveFailed: "No solution was found, or the input contains a conflict.",
     storageFailed: "Local save failed. You can keep using the current session."

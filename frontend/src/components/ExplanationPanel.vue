@@ -77,7 +77,7 @@ const stepSummary = computed(() => {
 </script>
 
 <template>
-  <section class="space-y-3">
+  <section data-testid="explanation-panel" class="space-y-3">
     <div v-if="step" class="flex flex-wrap items-center gap-2">
       <span class="rounded bg-slate-900 px-2 py-1 text-xs font-semibold text-white">{{ ruleLabel }}</span>
       <span class="rounded bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">

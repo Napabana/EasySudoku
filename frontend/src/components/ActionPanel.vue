@@ -19,6 +19,7 @@ defineProps<{
 const emit = defineEmits<{
   upload: [file: File];
   previewImage: [];
+  loadDemo: [];
   confirmBoard: [];
   editBoard: [];
   deriveNextStep: [];
@@ -39,6 +40,15 @@ const emit = defineEmits<{
       @upload="emit('upload', $event)"
       @preview="emit('previewImage')"
     />
+    <button
+      type="button"
+      data-testid="load-demo"
+      class="h-10 w-full rounded-md border border-blue-200 bg-blue-50 px-3 text-sm font-semibold text-blue-800 hover:bg-blue-100 disabled:text-slate-300"
+      :disabled="busy"
+      @click="emit('loadDemo')"
+    >
+      {{ $t("controls.loadDemo") }}
+    </button>
 
     <div class="rounded-md border border-slate-200 bg-slate-50 p-3">
       <div class="flex items-center justify-between">
@@ -69,6 +79,7 @@ const emit = defineEmits<{
       </div>
       <button
         type="button"
+        data-testid="confirm-board"
         class="h-11 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:text-slate-300"
         :disabled="busy || boardConfirmed"
         @click="emit('confirmBoard')"
@@ -85,6 +96,7 @@ const emit = defineEmits<{
       </button>
       <button
         type="button"
+        data-testid="next-step"
         class="col-span-2 h-12 rounded-md bg-blue-700 px-3 text-sm font-semibold text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-slate-300"
         :disabled="busy || !boardConfirmed"
         @click="emit('deriveNextStep')"
@@ -101,6 +113,7 @@ const emit = defineEmits<{
       </button>
       <button
         type="button"
+        data-testid="solve-all"
         class="h-11 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:text-slate-300"
         :disabled="busy"
         @click="emit('solveAll')"
@@ -109,6 +122,7 @@ const emit = defineEmits<{
       </button>
       <button
         type="button"
+        data-testid="clear-session"
         class="col-span-2 h-11 rounded-md border border-rose-200 bg-white px-3 text-sm font-semibold text-rose-700 hover:border-rose-400 hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 disabled:text-slate-300"
         :disabled="busy"
         @click="emit('clearSession')"

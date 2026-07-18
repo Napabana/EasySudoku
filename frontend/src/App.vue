@@ -142,6 +142,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", handleGlobalKeydown)
   <div class="min-h-screen bg-paper">
     <div
       v-if="!languageChosen"
+      data-testid="language-gate"
       class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4"
     >
       <div class="w-full max-w-sm rounded-lg bg-white p-6 shadow-2xl">
@@ -169,7 +170,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", handleGlobalKeydown)
       </div>
     </header>
 
-    <main class="mx-auto grid max-w-7xl gap-4 px-3 py-5 sm:px-4 lg:grid-cols-[minmax(420px,1fr)_320px_360px] lg:px-6">
+    <main data-testid="app-main" class="mx-auto grid max-w-7xl gap-4 px-3 py-5 sm:px-4 lg:grid-cols-[minmax(420px,1fr)_320px_360px] lg:px-6">
       <section class="space-y-4">
         <div class="flex items-center justify-between gap-3">
           <h2 class="text-base font-semibold text-slate-800">{{ $t("app.board") }}</h2>
@@ -211,6 +212,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", handleGlobalKeydown)
           :difficulty-reached="difficultyReached"
           @upload="sudoku.handleUpload"
           @preview-image="previewOpen = true"
+          @load-demo="sudoku.loadDemoPuzzle"
           @confirm-board="sudoku.confirmBoard"
           @edit-board="sudoku.editBoard"
           @derive-next-step="requestDeriveNextStep"
@@ -263,6 +265,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", handleGlobalKeydown)
 
     <div
       v-if="showBusyOverlay"
+      data-testid="busy-overlay"
       class="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/30 p-4"
     >
       <div class="rounded-lg bg-white px-5 py-4 text-sm font-semibold text-slate-700 shadow-xl">

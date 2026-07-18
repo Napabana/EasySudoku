@@ -1,5 +1,15 @@
 import type { BackendDeductionStep, DeductionStep, Grid, HintResult, LegacyStepResponse } from "../types/sudoku";
 
+export class SudokuApiError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly code: string
+  ) {
+    super(code);
+    this.name = "SudokuApiError";
+  }
+}
+
 interface UploadResponse {
   grid: Grid;
 }
@@ -114,10 +124,25 @@ export function adaptLegacyStep(step: LegacyStepResponse): DeductionStep {
   };
 }
 
+function errorCode(payload: unknown): string {
+  if (!payload || typeof payload !== "object" || !("detail" in payload)) return "REQUEST_FAILED";
+  const detail = (payload as { detail?: unknown }).detail;
+  if (detail && typeof detail === "object" && "code" in detail) {
+    const code = (detail as { code?: unknown }).code;
+    if (typeof code === "string" && code.length > 0) return code;
+  }
+  return "REQUEST_FAILED";
+}
+
 async function parseJson<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || response.statusText);
+    let payload: unknown = null;
+    try {
+      payload = await response.json();
+    } catch {
+      // A non-JSON proxy error is still represented by a stable generic code.
+    }
+    throw new SudokuApiError(response.status, errorCode(payload));
   }
   return response.json() as Promise<T>;
 }

@@ -66,7 +66,7 @@ async function focusCell(row: number, col: number): Promise<void> {
 </script>
 
 <template>
-  <div class="mx-auto w-full max-w-[min(92vw,620px)]">
+  <div data-testid="sudoku-board" class="mx-auto w-full max-w-[min(92vw,620px)]">
     <div class="grid aspect-square grid-cols-9 overflow-hidden rounded border-2 border-slate-800 bg-white shadow-sm">
       <template v-for="{ row, rowIndex } in rows" :key="rowIndex">
         <SudokuCell

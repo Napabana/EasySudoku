@@ -1,4 +1,5 @@
 import { computed, reactive, ref, watch } from "vue";
+import demoGrid from "../../../examples/demo_grid.json";
 import type {
   CellOrigin,
   CellPosition,
@@ -10,7 +11,7 @@ import type {
   PersistedSession,
   UploadedImageMeta
 } from "../types/sudoku";
-import { getHintCell, getNextStep, solveGrid, uploadImage } from "../services/sudokuApi";
+import { getHintCell, getNextStep, solveGrid, SudokuApiError, uploadImage } from "../services/sudokuApi";
 import { clearSessionStorage, clearUploadedImage, loadSession, loadUploadedImage, saveSession, saveUploadedImage } from "./usePersistence";
 import { makeHistoryEntry, truncateHistory } from "./useHistory";
 
@@ -87,6 +88,19 @@ function computeConflicts(grid: Grid): Set<string> {
   return conflicts;
 }
 
+function uploadErrorKey(error: unknown): string {
+  if (!(error instanceof SudokuApiError)) return "errors.uploadFailed";
+  const keys: Record<string, string> = {
+    EMPTY_FILE: "errors.emptyFile",
+    FILE_TOO_LARGE: "errors.fileTooLarge",
+    OCR_MODEL_UNAVAILABLE: "errors.ocrUnavailable",
+    OCR_NO_DIGITS: "errors.noDigits",
+    OCR_PROCESSING_FAILED: "errors.unreadableImage",
+    UNSUPPORTED_MEDIA_TYPE: "errors.invalidImageType"
+  };
+  return keys[error.code] ?? "errors.uploadFailed";
+}
+
 export function useSudoku() {
   const grid = ref<Grid>(emptyGrid());
   const initialGrid = ref<Grid>(emptyGrid());
@@ -104,6 +118,7 @@ export function useSudoku() {
   const errorMessage = ref("");
   const uploadedImage = ref<UploadedImageMeta | null>(null);
   const imageUrl = ref<string | null>(null);
+  let persistenceSuspended = false;
 
   const candidates = computed(() => computeCandidates(grid.value));
   const conflicts = computed(() => computeConflicts(grid.value));
@@ -161,7 +176,7 @@ export function useSudoku() {
       imageUrl.value = URL.createObjectURL(file);
       statusKey.value = "status.uploaded";
     } catch (error) {
-      errorMessage.value = `errors.uploadFailed: ${error instanceof Error ? error.message : String(error)}`;
+      errorMessage.value = uploadErrorKey(error);
     } finally {
       busy.value = false;
     }
@@ -231,8 +246,8 @@ export function useSudoku() {
       historyCursor.value = history.value.length - 1;
       currentStep.value = result.step;
       hint.value = null;
-    } catch (error) {
-      errorMessage.value = `errors.requestFailed: ${error instanceof Error ? error.message : String(error)}`;
+    } catch {
+      errorMessage.value = "errors.requestFailed";
     } finally {
       busy.value = false;
     }
@@ -248,8 +263,8 @@ export function useSudoku() {
     statusKey.value = "status.hinting";
     try {
       hint.value = await getHintCell(grid.value, selectedCell.value.row, selectedCell.value.col);
-    } catch (error) {
-      errorMessage.value = `errors.requestFailed: ${error instanceof Error ? error.message : String(error)}`;
+    } catch {
+      errorMessage.value = "errors.requestFailed";
     } finally {
       busy.value = false;
     }
@@ -271,8 +286,8 @@ export function useSudoku() {
         if (value && !origins[key]) origins[key] = "derived";
       }));
       statusKey.value = "status.solved";
-    } catch (error) {
-      errorMessage.value = `errors.requestFailed: ${error instanceof Error ? error.message : String(error)}`;
+    } catch {
+      errorMessage.value = "errors.requestFailed";
     } finally {
       busy.value = false;
     }
@@ -315,9 +330,38 @@ export function useSudoku() {
   }
 
   async function clearSession(): Promise<void> {
-    setGrid(emptyGrid());
+    persistenceSuspended = true;
+    try {
+      setGrid(emptyGrid());
+      initialGrid.value = emptyGrid();
+      setOrigins({});
+      boardConfirmed.value = false;
+      selectedCell.value = null;
+      history.value = [];
+      historyCursor.value = -1;
+      currentStep.value = null;
+      hint.value = null;
+      uploadedImage.value = null;
+      showCandidates.value = false;
+      if (imageUrl.value) URL.revokeObjectURL(imageUrl.value);
+      imageUrl.value = null;
+      statusKey.value = "status.ready";
+      errorMessage.value = "";
+      await clearUploadedImage();
+    } finally {
+      clearSessionStorage();
+      persistenceSuspended = false;
+    }
+  }
+
+  async function loadDemoPuzzle(): Promise<void> {
+    setGrid(demoGrid);
     initialGrid.value = emptyGrid();
-    setOrigins({});
+    const nextOrigins: Record<string, CellOrigin> = {};
+    demoGrid.forEach((row, r) => row.forEach((value, c) => {
+      if (value) nextOrigins[cellKey(r, c)] = "user";
+    }));
+    setOrigins(nextOrigins);
     boardConfirmed.value = false;
     selectedCell.value = null;
     history.value = [];
@@ -325,12 +369,11 @@ export function useSudoku() {
     currentStep.value = null;
     hint.value = null;
     uploadedImage.value = null;
-    showCandidates.value = false;
+    showCandidates.value = true;
     if (imageUrl.value) URL.revokeObjectURL(imageUrl.value);
     imageUrl.value = null;
-    statusKey.value = "status.ready";
     errorMessage.value = "";
-    clearSessionStorage();
+    statusKey.value = "status.demoLoaded";
     await clearUploadedImage();
   }
 
@@ -358,6 +401,7 @@ export function useSudoku() {
   watch(
     [grid, initialGrid, boardConfirmed, selectedCell, showCandidates, explanationMode, history, historyCursor, currentStep, uploadedImage],
     () => {
+      if (persistenceSuspended) return;
       const session: PersistedSession = {
         grid: grid.value,
         initialGrid: initialGrid.value,
@@ -410,6 +454,7 @@ export function useSudoku() {
     undo,
     redo,
     clearSession,
+    loadDemoPuzzle,
     restore
   };
 }

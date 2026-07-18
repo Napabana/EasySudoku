@@ -30,6 +30,7 @@ function handleChange(event: Event): void {
         {{ $t("controls.chooseFile") }}
         <input
           type="file"
+          data-testid="image-input"
           accept="image/*"
           capture="environment"
           :disabled="disabled"

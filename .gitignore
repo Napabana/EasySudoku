@@ -24,6 +24,7 @@ frontend/playwright-report/
 *.jpeg
 *.bmp
 *.tiff
+!examples/demo_sudoku.png
 
 .env
 *.log

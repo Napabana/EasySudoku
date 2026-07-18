@@ -1,82 +1,66 @@
-# EasySudoku 演示脚本
+# EasySudoku three-minute demo script
 
-目标时长：2-3 分钟。
+Target: finish by 3:00. Use `examples/demo_sudoku.png` and a clean browser profile. Do not claim an OCR percentage, latency, public URL, or GPT-5.6 contribution record that has not been verified.
 
-## 一句话定位
+## 0:00–0:20 — Problem and users
 
-EasySudoku 是一个可解释的数独推导导师。用户上传一张数独照片后，系统会识别盘面，并像老师一样一步一步解释下一步为什么成立。
+Show the landing screen.
 
-## 演示流程
+> Most Sudoku apps reveal answers. EasySudoku is for learners who want the next justified move. It turns a photo or typed puzzle into solver-verified, step-by-step teaching.
 
-1. 打开项目首页。
-   - 说明：这是一个 Vue + FastAPI Web App，支持桌面和手机端。
+Mention that runtime reasoning is deterministic human rules plus Z3, not an LLM guessing Sudoku moves.
 
-2. 切换语言。
-   - 先展示中文，再切到英文。
-   - 强调：UI、规则名、解释文本都支持中英文。
+## 0:20–1:35 — Core learning flow
 
-3. 上传数独图片。
-   - 选择一张准备好的测试图片。
-   - OCR 完成后展示识别盘面。
-   - 如果有识别错误，手动修正一两个格子。
+1. Choose Chinese and upload `examples/demo_sudoku.png`.
+2. Explain that OpenCV corrects the board and the local ONNX model recognizes digits without an external OCR service.
+3. Point out that recognized cells are still editable. Correct one digit and restore it to demonstrate the review gate.
+4. Confirm the givens so the starting clues become locked.
+5. Select an empty cell to show candidates.
+6. Click **推导下一步**. Point to the target, conclusion, reason, verification, and the new history entry.
+7. Switch Brief → Teaching → Technical to show the same structured deduction at different depths.
 
-4. 确认初始盘面。
-   - 点击 `Confirm givens / 确认初始盘面`。
-   - 指出初始数字被锁定，后续推导不会误改。
+Say explicitly: the included PNG is a reproducible synthetic integration fixture, not evidence of camera-photo accuracy.
 
-5. 展示候选数和选中格。
-   - 点击一个空格。
-   - 展示蓝色选中框、同行/同列/同宫弱高亮、候选数 3x3 布局。
+## 1:35–1:55 — Language, history, and recovery
 
-6. 执行下一步。
-   - 点击 `Next step / 推导下一步`。
-   - 展示当前目标格、黄色目标背景、历史新增一项。
+Switch to English and show that labels, rule names, and structured explanations change together. Move backward and forward in history, refresh once, and show that the board, history, language, explanation mode, and image preview return.
 
-7. 讲解解释面板。
-   - 展示 `Target / Conclusion / Why / Verification` 分组。
-   - 切换 Brief / Teaching / Technical。
-   - 说明：人类规则优先，复杂情况由 SMT 验证兜底。
+## 1:55–2:25 — Architecture and trust boundary
 
-8. 历史回放。
-   - 点击 Back / Forward。
-   - 点击历史卡片跳转。
-   - 说明：每一步保存完整盘面状态。
+Show the README architecture diagram or keep the application visible while narrating:
 
-9. 刷新恢复。
-   - 刷新页面。
-   - 展示盘面、历史、语言、解释模式被恢复。
-   - 说明：盘面和设置保存在 localStorage，上传图片保存在 IndexedDB。
+> Image or manual input becomes an editable board. Candidate analysis tries human rules first. Z3 and UNSAT Core verify harder forced values. The backend returns a structured step; Vue localizes it and stores replayable history.
 
-10. 可选：完整求解。
-    - 点击 Solve。
-    - 展示确认弹窗，避免误操作。
+Emphasize that OCR may require correction, while confirmed givens and solver constraints remain the source of truth.
 
-## 技术亮点
+## 2:25–2:45 — Author decisions and Codex assistance
 
-- 本地 OCR：OpenCV 透视变换 + ONNX 数字模型，无需外部 OCR 服务。
-- 可解释推导：Hidden Single / Naked Pair 等人类规则优先。
-- SMT 兜底：Z3 UNSAT Core 用于验证复杂排除。
-- 结构化协议：后端返回 `step.rule_type`、`target_cell`、`candidate_changes`、`verification_type`，前端负责 i18n 解释。
-- 前端体验：Vue 3 + TypeScript + Tailwind，候选数、历史、刷新恢复和响应式布局。
-- 自动化验证：Playwright smoke test 覆盖主流程和移动端横向溢出。
+> The author chose the teaching-first product direction, local OCR, deterministic solver trust model, bilingual UX, and submission boundaries. Codex 5.6 sol assisted with repository auditing, incremental hardening, automated tests, Docker/CI, and documentation. GPT-5.6 contribution remains pending final audit, and no session ID is claimed yet.
 
-## 录制前检查
+## 2:45–3:00 — Value and next step
+
+Return to the explanation/history view.
+
+> EasySudoku makes a solver's certainty useful to a learner: inspectable input, one justified move, and a replayable explanation. Next, we will add advanced human rules and a labeled real-photo OCR evaluation before publishing accuracy claims.
+
+Stop before 3:00.
+
+## Recording checklist
 
 ```bash
-cd ~/EasySudoku/frontend
-npm install
-npm run build
-
 cd ~/EasySudoku
 source venv312/bin/activate
+./scripts/npm-safe.sh --prefix frontend run type-check
+./scripts/npm-safe.sh --prefix frontend run build
 python -m uvicorn main:app --host 127.0.0.1 --port 8000
 ```
 
-另开终端：
+In a second terminal:
 
 ```bash
 cd ~/EasySudoku/frontend
 EASYSUDOKU_BASE_URL=http://127.0.0.1:8000 npm run test:smoke
 ```
 
-确认 smoke test 通过后再录制。
+Before recording, verify the browser language gate, fixed upload, correction, confirmation, next step, all three explanation modes, history replay, refresh restoration, and the final public link in a clean browser.

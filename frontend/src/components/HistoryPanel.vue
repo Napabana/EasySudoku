@@ -24,17 +24,18 @@ watch(
 </script>
 
 <template>
-  <section>
+  <section data-testid="history-panel">
     <div class="mb-2 flex items-center justify-between text-sm">
       <span class="font-semibold text-slate-700">{{ $t("history.progress", { current: Math.max(cursor + 1, 0), total: history.length }) }}</span>
     </div>
-    <div v-if="history.length === 0" class="rounded-md border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-500">
+    <div v-if="history.length === 0" data-testid="history-empty" class="rounded-md border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-500">
       {{ $t("history.empty") }}
     </div>
     <div v-else ref="listEl" class="max-h-72 space-y-1.5 overflow-auto pr-1">
       <button
         v-for="(entry, index) in history"
         :key="entry.id"
+        data-testid="history-item"
         type="button"
         class="w-full rounded-md border px-3 py-2 text-left text-sm transition focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
         :class="index === cursor ? 'border-blue-500 bg-blue-50 shadow-sm' : 'border-slate-200 bg-white hover:bg-slate-50'"

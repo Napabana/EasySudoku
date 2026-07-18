@@ -17,6 +17,7 @@ const emit = defineEmits<{
     <div class="inline-flex rounded-md border border-slate-300 bg-white p-1 shadow-sm">
       <button
         type="button"
+        data-testid="language-zh-CN"
         class="rounded px-3 py-1.5 text-sm font-medium transition"
         :class="modelValue === 'zh-CN' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'"
         @click="emit('update:modelValue', 'zh-CN')"
@@ -25,6 +26,7 @@ const emit = defineEmits<{
       </button>
       <button
         type="button"
+        data-testid="language-en-US"
         class="rounded px-3 py-1.5 text-sm font-medium transition"
         :class="modelValue === 'en-US' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'"
         @click="emit('update:modelValue', 'en-US')"
