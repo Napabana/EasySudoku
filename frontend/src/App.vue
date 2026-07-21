@@ -170,7 +170,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", handleGlobalKeydown)
       </div>
     </header>
 
-    <main data-testid="app-main" class="mx-auto grid max-w-7xl gap-4 px-3 py-5 sm:px-4 lg:grid-cols-[minmax(420px,1fr)_320px_360px] lg:px-6">
+    <main data-testid="app-main" class="mx-auto grid min-h-0 max-w-7xl gap-4 px-3 py-5 sm:px-4 lg:grid-cols-[minmax(420px,1fr)_320px_360px] lg:px-6">
       <section class="space-y-4">
         <div class="flex items-center justify-between gap-3">
           <h2 class="text-base font-semibold text-slate-800">{{ $t("app.board") }}</h2>
@@ -225,7 +225,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", handleGlobalKeydown)
         />
       </aside>
 
-      <aside class="space-y-4">
+      <aside class="min-h-0 space-y-4">
         <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <ExplanationModeSelector
             :model-value="sudoku.explanationMode.value"
@@ -252,7 +252,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", handleGlobalKeydown)
           />
         </section>
 
-        <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <section class="min-h-0 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <h2 class="mb-3 text-base font-semibold text-slate-800">{{ $t("app.history") }}</h2>
           <HistoryPanel
             :history="sudoku.history.value"

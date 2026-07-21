@@ -18,20 +18,25 @@ watch(
   async () => {
     await nextTick();
     const current = listEl.value?.querySelector<HTMLElement>("[data-current='true']");
-    current?.scrollIntoView({ block: "nearest" });
+    current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }
 );
 </script>
 
 <template>
-  <section data-testid="history-panel">
+  <section data-testid="history-panel" class="min-h-0">
     <div class="mb-2 flex items-center justify-between text-sm">
       <span class="font-semibold text-slate-700">{{ $t("history.progress", { current: Math.max(cursor + 1, 0), total: history.length }) }}</span>
     </div>
     <div v-if="history.length === 0" data-testid="history-empty" class="rounded-md border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-500">
       {{ $t("history.empty") }}
     </div>
-    <div v-else ref="listEl" class="max-h-72 space-y-1.5 overflow-auto pr-1">
+    <div
+      v-else
+      ref="listEl"
+      data-testid="history-list"
+      class="h-52 min-h-0 space-y-1.5 overflow-y-auto overflow-x-hidden pr-2 [scrollbar-gutter:stable] sm:h-56"
+    >
       <button
         v-for="(entry, index) in history"
         :key="entry.id"
