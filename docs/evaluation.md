@@ -24,6 +24,7 @@ The local WSL `npm` command currently resolves to a Windows-mounted shim without
 | Vue production build after UI expansion | `./scripts/npm-safe.sh --prefix frontend run build` | Passed; Vite transformed 55 modules |
 | Playwright end-to-end suite | direct Playwright CLI with the repository config | Passed; 18/18 tests across desktop and mobile-390 projects |
 | Dockerfile static build check | `docker build --check .` | Passed on the final Dockerfile; BuildKit reported no warnings |
+| Production Docker image and container | Recorded GitHub Actions run [29636708583](https://github.com/Napabana/EasySudoku/actions/runs/29636708583), implementation commit `915a61c` | Passed; image build, container start, Docker health, `/health`, `/`, and cleanup steps all completed successfully |
 
 The Playwright suite includes the language gate, Chinese content leakage check, solve confirmation branches, fixed OCR upload and correction, confirmation, history and persistence restoration, localStorage/IndexedDB clearing, structured upload/network errors, duplicate-action prevention, and responsive assertions at 360×800, 390×844, 768×1024, and 1440×900. These are automated browser viewport checks, not claims about testing on four physical devices.
 
@@ -53,6 +54,6 @@ The final audit must record real outcomes for:
 - production behavior when the Vue build is missing;
 - legacy behavior only with `ALLOW_LEGACY_FRONTEND=1`.
 
-The Python/API/TypeScript/Vue/Playwright checks and the final two production frontend-policy behaviors passed in the current checkout. A full local Docker image and container run are not recorded as passed: two attempts were stopped after Docker Hub base-image downloads remained extremely slow (approximately 15 minutes and 7 minutes without completing). The checked-in CI performs the full Docker build on a clean GitHub runner; its result and a container `/health` check must still be recorded before submission.
+The Python/API/TypeScript/Vue/Playwright checks and the final two production frontend-policy behaviors passed in the recorded checkout. GitHub Actions run 29636708583 subsequently verified the full production image build, running-container Docker health, `/health`, and `/` on a clean runner. The two local Docker attempts were stopped after Docker Hub base-image downloads remained extremely slow (approximately 15 minutes and 7 minutes without completing), so no local Docker pass is claimed.
 
-No container health result is inferred from the static Dockerfile check.
+The container result comes from the successful CI run, not from the earlier static Dockerfile check. It is scoped to implementation commit `915a61c`; later documentation and repository-hygiene commits do not change the Dockerfile, CI workflow, or runtime code covered by that result. The current branch's Actions status should still be checked before final submission.

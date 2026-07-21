@@ -36,3 +36,17 @@ claude*.md
 CLAUDE.md
 dev_log.md
 .claude/
+
+# Local agent configuration and development-process artifacts
+/.codex/
+/.agents/
+/AGENTS.md
+/docs/2026-07-18-task-plan.md
+/docs/submission_checklist.md
+/docs/internal/
+/package-lock.json
+
+# Temporary patch and replacement files
+*.patch
+*.next
+*.tmp

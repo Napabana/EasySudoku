@@ -16,7 +16,7 @@ Most Sudoku apps optimize for completing a puzzle. EasySudoku is designed for pe
 - Candidate display, cell hints, step history, back/forward replay, and refresh restoration.
 - Responsive Vue 3 interface for desktop and mobile.
 - Structured API errors, bounded uploads, health/version endpoints, and explicit production frontend checks.
-- A reproducible synthetic demo fixture and automated Python, API, Playwright, and Docker verification.
+- A reproducible synthetic demo fixture, automated Python/API/Playwright verification, and CI-verified production image and container-health checks.
 
 ## Quick start
 
@@ -80,6 +80,31 @@ The solver pipeline is layered: Python bitmask prechecks remove direct row/colum
 
 See [architecture details](docs/architecture.md) for trust boundaries and deployment behavior.
 
+## OCR Model Provenance
+
+The bundled [`models/sudoku_chars74k.onnx`](models/sudoku_chars74k.onnx) is an
+author-trained 10-class digit model, not a downloaded third-party pretrained
+model. The EasySudoku project author trained and exported it from Chars74K digit
+data using a modified training workflow initially based on Karnika Kapoor's
+Kaggle Notebook, [*Sudoku Solutions From Image: Computer
+Vision*](https://www.kaggle.com/code/karnikakapoor/sudoku-solutions-from-image-computer-vision).
+
+The Notebook page did not display an explicit software license when checked on
+2026-07-21, so EasySudoku does not describe it as Apache-2.0 or MIT. The raw
+Chars74K images are not redistributed in this repository. Chars74K should be
+acknowledged by citing T. E. de Campos, B. R. Babu, and M. Varma, “Character
+Recognition in Natural Images,” VISAPP 2009; see the [official dataset
+page](https://teodecampos.github.io/chars74k/) and [publication
+record](https://www.microsoft.com/en-us/research/publication/character-recognition-in-natural-images/).
+
+The repository's MIT License applies only to original EasySudoku code. Neither
+the Kaggle Notebook, Chars74K, nor the author-trained ONNX artifact is described
+by this project as MIT- or Apache-2.0-licensed. The repository does not contain
+the original Chars74K images. Full
+attribution, licensing caveats, and model details are recorded in
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) and the
+[`models/MODEL_CARD.md`](models/MODEL_CARD.md).
+
 ## API
 
 | Method | Path | Purpose |
@@ -113,10 +138,11 @@ The current checked-in evaluation records only commands actually run. Real-photo
 
 ## Build Week
 
-Git history establishes the boundary used for this submission:
+The current public release history contains nine commits:
 
-- Before Build Week (commits `8e8e856` through `639f9da`, 2026-05-26 to 2026-05-27): FastAPI/HTML prototype, Z3 and UNSAT Core solver, basic human rules, OpenCV/ONNX OCR, launch scripts, and an initial Docker setup.
-- Build Week (starting with `171a34c`, 2026-07-17): Vue 3/TypeScript responsive UI, bilingual structured explanations, explanation modes, candidate/history/persistence flows, expanded Playwright coverage, production API hardening, reproducible demo assets, CI, and deployment documentation.
+- Before Build Week (4 commits, `8e8e856` through `639f9da`, 2026-05-26 to 2026-05-27): FastAPI/HTML prototype, Z3 and UNSAT Core solver, basic human rules, OpenCV/ONNX OCR, launch scripts, and an initial Docker setup.
+- Build Week (4 commits: `171a34c`, `8ee8689`, `b621577`, and `915a61c`, 2026-07-17 to 2026-07-18): Vue 3/TypeScript responsive UI, bilingual structured explanations, MIT License, candidate/history/persistence flows, expanded Playwright coverage, production API hardening, reproducible demo assets, CI production-container verification, and submission documentation.
+- Final public-release cleanup (1 commit, 2026-07-21): synchronized repository status, completed the GPT-5.6 contribution audit, added OCR model provenance, and removed internal process artifacts from the tracked tree.
 
 The detailed evidence table is in [docs/build_week.md](docs/build_week.md).
 
@@ -131,17 +157,16 @@ The detailed evidence table is in [docs/build_week.md](docs/build_week.md).
 
 ### Codex contributions
 
-Codex 5.6 sol assisted with repository auditing, incremental Vue/FastAPI hardening, test design and execution, fixed demo fixtures, Docker/CI configuration, and documentation. The project author retains responsibility for product choices, reviewing changes, measuring claims, licensing, deployment, and submission.
+Codex GPT-5.6 sol completed the Build Week repository audit; Vue/FastAPI hardening; structured bilingual step integration; fixed demo fixtures; API and Playwright test expansion; persistence-race fix; Docker/CI configuration; documentation; and the recorded local test runs. Its historical solver-module changes added structured response metadata around the existing deterministic rules and Z3 fallback rather than replacing their algorithms.
 
-**GPT-5.6 contribution pending final audit**. No Codex Session ID is published until the project author verifies the correct value.
+The project author made the product, trust-model, architecture, scope, and submission-claim decisions and remains responsible for review, licensing, deployment, and submission. The completed contribution audit is in [docs/gpt56_contribution_audit.md](docs/gpt56_contribution_audit.md). No Codex Session ID is published until the project author verifies the correct value.
 
-## Live demo and submission
+## Submission status
 
-- Live demo: `LIVE_DEMO_URL_PENDING`
+- Deployment: not completed; no live demo URL is published.
 - Three-minute walkthrough: [docs/demo_script.md](docs/demo_script.md)
-- Submission checklist: [docs/submission_checklist.md](docs/submission_checklist.md)
 
-External deployment, public repository visibility, video publishing, Devpost fields, licensing, and model/dataset attribution remain manual verification tasks.
+The repository is public and includes an MIT License. Recorded GitHub Actions run [29636708583](https://github.com/Napabana/EasySudoku/actions/runs/29636708583) verified the production image build, container health, `/health`, and Vue root page for implementation commit `915a61c`. Later repository-hygiene documentation does not change the verified runtime implementation. A full local Docker run remains unperformed. External deployment, video publishing, Devpost fields, Codex Session ID disclosure, and confirmation of upstream reuse and ONNX weight-distribution terms remain manual tasks tracked outside the public repository.
 
 ## Repository map
 
@@ -151,7 +176,7 @@ EasySudoku/
 ├── frontend/                 # Vue 3 + Vite + TypeScript application and Playwright tests
 ├── examples/                 # deterministic puzzle, solution, generator, and demo PNG
 ├── models/                   # local ONNX model
-├── docs/                     # architecture, Build Week, evaluation, demo, and checklist
+├── docs/                     # public architecture, Build Week, evaluation, audit, and demo docs
 ├── test_phase*.py            # solver and vision structure tests
 ├── test_demo.py, test_api.py # demo contract and FastAPI tests
 ├── Dockerfile
@@ -163,4 +188,4 @@ EasySudoku/
 - Add Pointing Pair, Box-Line Reduction, Naked Triple, Hidden Pair, and later X-Wing.
 - Build a labeled, consented real-photo OCR evaluation set and publish the exact methodology.
 - Add richer candidate-change narration and complete deduction-chain playback.
-- Deploy only after validating privacy, model/dataset attribution, public links, and clean-browser behavior.
+- Deploy only after validating privacy, upstream reuse and model-weight terms, public links, and clean-browser behavior.

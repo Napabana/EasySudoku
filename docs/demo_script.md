@@ -1,6 +1,6 @@
 # EasySudoku three-minute demo script
 
-Target: finish by 3:00. Use `examples/demo_sudoku.png` and a clean browser profile. Do not claim an OCR percentage, latency, public URL, or GPT-5.6 contribution record that has not been verified.
+Target: finish by 3:00. Use `examples/demo_sudoku.png` and a clean browser profile. Do not claim an OCR percentage, latency, public deployment URL, Docker runtime result, or Codex Session ID that has not been verified.
 
 ## 0:00–0:20 — Problem and users
 
@@ -36,7 +36,7 @@ Emphasize that OCR may require correction, while confirmed givens and solver con
 
 ## 2:25–2:45 — Author decisions and Codex assistance
 
-> The author chose the teaching-first product direction, local OCR, deterministic solver trust model, bilingual UX, and submission boundaries. Codex 5.6 sol assisted with repository auditing, incremental hardening, automated tests, Docker/CI, and documentation. GPT-5.6 contribution remains pending final audit, and no session ID is claimed yet.
+> The author chose the teaching-first product direction, local OCR, deterministic solver trust model, bilingual UX, and submission boundaries. Codex GPT-5.6 sol completed the repository audit, Vue/FastAPI hardening, automated tests, Docker/CI configuration, contribution audit, and submission documentation. The contribution audit is complete; no Codex Session ID or successful local Docker container run is claimed.
 
 ## 2:45–3:00 — Value and next step
 
@@ -63,4 +63,4 @@ cd ~/EasySudoku/frontend
 EASYSUDOKU_BASE_URL=http://127.0.0.1:8000 npm run test:smoke
 ```
 
-Before recording, verify the browser language gate, fixed upload, correction, confirmation, next step, all three explanation modes, history replay, refresh restoration, and the final public link in a clean browser.
+Before recording, verify the browser language gate, fixed upload, correction, confirmation, next step, all three explanation modes, history replay, and refresh restoration. Verify a public link in a clean browser only after deployment; otherwise do not claim one.
