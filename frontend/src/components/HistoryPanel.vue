@@ -17,14 +17,24 @@ watch(
   () => [props.history.length, props.cursor],
   async () => {
     await nextTick();
-    const current = listEl.value?.querySelector<HTMLElement>("[data-current='true']");
-    current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    const list = listEl.value;
+    const current = list?.querySelector<HTMLElement>("[data-current='true']");
+    if (!list || !current) return;
+
+    const listRect = list.getBoundingClientRect();
+    const currentRect = current.getBoundingClientRect();
+    const edgePadding = 2;
+    if (currentRect.top < listRect.top + edgePadding) {
+      list.scrollBy({ top: currentRect.top - listRect.top - edgePadding, behavior: "smooth" });
+    } else if (currentRect.bottom > listRect.bottom - edgePadding) {
+      list.scrollBy({ top: currentRect.bottom - listRect.bottom + edgePadding, behavior: "smooth" });
+    }
   }
 );
 </script>
 
 <template>
-  <section data-testid="history-panel" class="min-h-0">
+  <section data-testid="history-panel" class="flex min-h-0 flex-1 flex-col">
     <div class="mb-2 flex items-center justify-between text-sm">
       <span class="font-semibold text-slate-700">{{ $t("history.progress", { current: Math.max(cursor + 1, 0), total: history.length }) }}</span>
     </div>
@@ -35,7 +45,7 @@ watch(
       v-else
       ref="listEl"
       data-testid="history-list"
-      class="h-52 min-h-0 space-y-1.5 overflow-y-auto overflow-x-hidden pr-2 [scrollbar-gutter:stable] sm:h-56"
+      class="h-52 min-h-0 space-y-1.5 overflow-y-auto overflow-x-hidden pr-2 [scrollbar-gutter:stable] sm:h-56 lg:h-auto lg:flex-1"
     >
       <button
         v-for="(entry, index) in history"

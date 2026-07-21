@@ -139,7 +139,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", handleGlobalKeydown)
 </script>
 
 <template>
-  <div class="min-h-screen bg-paper">
+  <div class="min-h-dvh bg-paper lg:flex lg:h-dvh lg:flex-col lg:overflow-hidden">
     <div
       v-if="!languageChosen"
       data-testid="language-gate"
@@ -160,7 +160,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", handleGlobalKeydown)
       </div>
     </div>
 
-    <header class="border-b border-slate-200 bg-white">
+    <header class="shrink-0 border-b border-slate-200 bg-white">
       <div class="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between lg:px-6">
         <div>
           <h1 class="text-2xl font-bold tracking-normal text-slate-950">{{ $t("app.title") }}</h1>
@@ -170,8 +170,8 @@ onBeforeUnmount(() => window.removeEventListener("keydown", handleGlobalKeydown)
       </div>
     </header>
 
-    <main data-testid="app-main" class="mx-auto grid min-h-0 max-w-7xl gap-4 px-3 py-5 sm:px-4 lg:grid-cols-[minmax(420px,1fr)_320px_360px] lg:px-6">
-      <section class="space-y-4">
+    <main data-testid="app-main" class="mx-auto grid min-h-0 max-w-7xl gap-4 px-3 py-5 sm:px-4 lg:h-0 lg:w-full lg:flex-1 lg:grid-cols-[minmax(420px,1fr)_320px_360px] lg:overflow-hidden lg:px-6">
+      <section class="min-h-0 space-y-4 lg:flex lg:flex-col lg:space-y-0 lg:gap-4 lg:overflow-hidden">
         <div class="flex items-center justify-between gap-3">
           <h2 class="text-base font-semibold text-slate-800">{{ $t("app.board") }}</h2>
           <div class="flex flex-wrap justify-end gap-2 text-xs text-slate-600">
@@ -196,7 +196,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", handleGlobalKeydown)
         />
       </section>
 
-      <aside class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <aside class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm lg:h-full lg:min-h-0 lg:overflow-y-auto">
         <h2 class="mb-4 text-base font-semibold text-slate-800">{{ $t("app.actions") }}</h2>
         <ActionPanel
           :busy="sudoku.busy.value"
@@ -225,8 +225,8 @@ onBeforeUnmount(() => window.removeEventListener("keydown", handleGlobalKeydown)
         />
       </aside>
 
-      <aside class="min-h-0 space-y-4">
-        <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <aside class="min-h-0 space-y-4 lg:flex lg:h-full lg:flex-col lg:gap-4 lg:space-y-0 lg:overflow-hidden">
+        <section class="shrink-0 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <ExplanationModeSelector
             :model-value="sudoku.explanationMode.value"
             @update:model-value="sudoku.explanationMode.value = $event"
@@ -241,7 +241,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", handleGlobalKeydown)
           </div>
         </section>
 
-        <section class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <section class="shrink-0 rounded-lg border border-slate-200 bg-white p-4 shadow-sm lg:max-h-[40%] lg:overflow-y-auto">
           <h2 class="mb-3 text-base font-semibold text-slate-800">{{ $t("app.explanation") }}</h2>
           <ExplanationPanel
             :step="sudoku.currentStep.value"
@@ -252,7 +252,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", handleGlobalKeydown)
           />
         </section>
 
-        <section class="min-h-0 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <section class="min-h-0 rounded-lg border border-slate-200 bg-white p-4 shadow-sm lg:flex lg:flex-1 lg:flex-col lg:overflow-hidden">
           <h2 class="mb-3 text-base font-semibold text-slate-800">{{ $t("app.history") }}</h2>
           <HistoryPanel
             :history="sudoku.history.value"

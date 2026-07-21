@@ -73,10 +73,14 @@ test("responsive layouts keep the square board usable and unobstructed", async (
     { width: 360, height: 800 },
     { width: 390, height: 844 },
     { width: 768, height: 1024 },
+    { width: 1366, height: 768 },
     { width: 1440, height: 900 }
   ]) {
     await page.setViewportSize(viewport);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `${viewport.width}x${viewport.height} overflow`).toBe(true);
+    if (viewport.width >= 1024) {
+      expect(await page.evaluate(() => document.documentElement.scrollHeight <= document.documentElement.clientHeight + 2), `${viewport.width}x${viewport.height} vertical overflow`).toBe(true);
+    }
 
     const board = page.getByTestId("sudoku-board");
     await board.scrollIntoViewIfNeeded();

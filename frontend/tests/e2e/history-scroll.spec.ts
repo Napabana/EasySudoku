@@ -3,11 +3,13 @@ import { chooseLanguage, loadAndConfirmDemo } from "./helpers";
 
 async function expectCurrentItemVisible(list: Locator): Promise<void> {
   await expect.poll(async () => {
-    return list.locator("[data-current='true']").evaluate((item, element) => {
-      const itemRect = item.getBoundingClientRect();
+    return list.evaluate((element) => {
+      const current = element.querySelector<HTMLElement>("[data-current='true']");
+      if (!current) return false;
+      const currentRect = current.getBoundingClientRect();
       const listRect = element.getBoundingClientRect();
-      return itemRect.top >= listRect.top - 1 && itemRect.bottom <= listRect.bottom + 1;
-    }, await list.elementHandle());
+      return currentRect.top >= listRect.top - 1 && currentRect.bottom <= listRect.bottom + 1;
+    });
   }).toBe(true);
 }
 
@@ -40,7 +42,7 @@ test("history stays bounded and keeps the selected step visible", async ({ page 
       overflowY: style.overflowY
     };
   });
-  expect(desktopLayout.clientHeight).toBe(224);
+  expect(desktopLayout.clientHeight).toBeGreaterThan(0);
   expect(desktopLayout.scrollHeight).toBeGreaterThan(desktopLayout.clientHeight);
   expect(desktopLayout.scrollWidth).toBeLessThanOrEqual(desktopLayout.clientWidth);
   expect(desktopLayout.overflowX).toBe("hidden");
@@ -51,6 +53,15 @@ test("history stays bounded and keeps the selected step visible", async ({ page 
     await page.getByTestId("history-item").nth(index).click();
     await expect(page.getByTestId("history-item").nth(index)).toHaveAttribute("data-current", "true");
     await expectCurrentItemVisible(list);
+  }
+
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 1366, height: 768 }
+  ]) {
+    await page.setViewportSize(viewport);
+    expect(await page.evaluate(() => document.documentElement.scrollHeight <= document.documentElement.clientHeight + 2)).toBe(true);
+    expect(await list.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
   }
 
   await page.setViewportSize({ width: 390, height: 844 });
